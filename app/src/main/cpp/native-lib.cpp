@@ -10,6 +10,7 @@
 #include <locale>
 #include <string>
 
+void createServer();
 namespace
 {
 
@@ -90,9 +91,18 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_example_udpflow_MainActivity_onTic
 	JniCommandHandler::GetInstance()->onTick();
 	return nullptr;
 }
+void createServer()
+{
+	if (!g_server)
+	{
+		const auto port = udpflow::Server::default_port;
+		g_server = std::__ndk1::make_unique<udpflow::Server>(JniCommandHandler::GetInstance(), getStat(), port);
+		output(std::string("Start UDP Server on ") + std::to_string(port));
+	}
+}
 
 extern "C" JNIEXPORT jobject JNICALL
-Java_com_example_udpflow_MainActivity_SetOutput(JNIEnv * env, jobject main_activity)
+Java_com_example_udpflow_MainActivity_Init(JNIEnv * env, jobject main_activity)
 {
 	JavaVM * jvm = nullptr;
 	env->GetJavaVM(&jvm);
@@ -127,6 +137,12 @@ Java_com_example_udpflow_MainActivity_SetOutput(JNIEnv * env, jobject main_activ
 		jmethodID method = env->GetMethodID(cls, "onStopTimer", "()V");
 		env->CallVoidMethod(main_activity, method);
 	};
+
+	createServer();
+
+	JniCommandHandler::GetInstance()->StartStat();
+	JniCommandHandler::GetInstance()->StartMeasure();
+
 	return nullptr;
 }
 
@@ -139,12 +155,7 @@ Java_com_example_udpflow_MainActivity_UdpServerIsActive(JNIEnv * env, jobject /*
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_example_udpflow_MainActivity_UdpServerTurnOn(JNIEnv * env, jobject /* this */)
 {
-	if (!g_server)
-	{
-		const auto port = udpflow::Server::default_port;
-		g_server = std::make_unique<udpflow::Server>(JniCommandHandler::GetInstance(), getStat(), port);
-		output(std::string("Start UDP Server on ") + std::to_string(port));
-	}
+	createServer();
 
 	if (g_start_timer)
 		g_start_timer();

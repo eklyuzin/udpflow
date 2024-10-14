@@ -71,6 +71,8 @@ class MainActivity : AppCompatActivity(), OnClickListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        Init()
+        binding.UdpServerSwitch.isChecked = UdpServerIsActive();
         binding.UdpServerSwitch.setOnClickListener(this)
         // Example of a call to a native method
         binding.textView.setMovementMethod(ScrollingMovementMethod())
@@ -81,8 +83,6 @@ class MainActivity : AppCompatActivity(), OnClickListener {
         binding.buttonSave.setOnClickListener {
             onSaveStat()
         }
-
-        SetOutput()
 
         ActivityCompat.requestPermissions(
             this@MainActivity, arrayOf<String>(
@@ -146,7 +146,7 @@ class MainActivity : AppCompatActivity(), OnClickListener {
      * A native method that is implemented by the 'udpflow' native library,
      * which is packaged with this application.
      */
-    external fun SetOutput(): Void
+    external fun Init(): Void
     external fun UdpServerTurnOn(): Void
     external fun UdpServerTurnOff(): Void
     external fun UdpServerIsActive(): Boolean
