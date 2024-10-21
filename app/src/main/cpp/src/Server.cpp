@@ -3,14 +3,15 @@
 #include "udpflow/ICommandHandler.h"
 #include "udpflow/Stat.h"
 
+#include <algorithm>
 #include <arpa/inet.h>
+#include <cstring>
 #include <linux/in.h>
 #include <memory>
 #include <pthread.h>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <sys/endian.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <vector>
@@ -22,7 +23,10 @@ namespace udpflow
 namespace
 {
 
-void process_command(ICommandHandler & command_handler, std::string command_text, const sockaddr_in & client_address)
+void process_command(
+	ICommandHandler & command_handler,
+	const std::string & command_text,
+	const sockaddr_in & client_address)
 {
 	output(std::string("Process command: ") + command_text);
 
@@ -107,9 +111,9 @@ void * Server::ThreadFunc(void * _self)
 {
 	const auto self = static_cast<Server *>(_self);
 
-	char buffer[1024];
+	char buffer[64 * 1024];
 	struct sockaddr_in client_address;
-	decltype(client_address.sin_addr.s_addr) addr = {};
+	decltype(client_address.sin_addr.s_addr) last_peer_addr = {};
 	memset(&client_address, 0, sizeof(client_address));
 
 	while (!self->stop_flag_)
@@ -119,22 +123,32 @@ void * Server::ThreadFunc(void * _self)
 			self->sockfd_,
 			(char *)buffer,
 			sizeof(buffer),
-			MSG_WAITALL,
+			MSG_DONTWAIT,
 			(struct sockaddr *)&client_address,
 			&len);
-
+		if (n < 0)
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			{
+				// Handle non-blocking receive error
+				continue;
+			}
+			perror("recvfrom");
+			break;
+		}
 		self->stat_->AddRecv(n);
 
-		if (client_address.sin_addr.s_addr != addr)
+		if (client_address.sin_addr.s_addr != last_peer_addr)
 		{
-			addr = client_address.sin_addr.s_addr;
+			last_peer_addr = client_address.sin_addr.s_addr;
 			char ip_str[INET_ADDRSTRLEN];
 			output(
 				"Receive from: "
 				+ std::string(inet_ntop(AF_INET, &(client_address.sin_addr), &ip_str[0], INET_ADDRSTRLEN))
 				+ std::string(" r: ") + std::to_string(n));
 		}
-		if (buffer + n == std::find_if_not(
+		if (buffer + n
+			== std::find_if_not(
 				buffer,
 				buffer + n,
 				[](char c)

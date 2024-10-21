@@ -31,7 +31,7 @@ std::string Stat::GetStat() const
 				/ std::chrono::duration_cast<std::chrono::seconds>(now - prev_data->first).count();
 		return oss.str();
 	}
-	return std::string();
+	return {};
 }
 
 void Stat::AddSent(std::uint64_t n)

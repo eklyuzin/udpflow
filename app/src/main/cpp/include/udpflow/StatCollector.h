@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <deque>
+#include <memory>
 #include <utility>
 
 namespace udpflow
@@ -12,9 +13,9 @@ namespace udpflow
 class StatCollector
 {
 public:
-	StatCollector(std::shared_ptr<Stat> stat);
+	explicit StatCollector(std::shared_ptr<Stat> stat);
 	void onTick();
-	std::string dump() const;
+	[[nodiscard]] std::string dump() const;
 
 private:
 	const std::shared_ptr<Stat> stat_;

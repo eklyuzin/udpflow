@@ -20,8 +20,6 @@ public:
 	Sender(std::shared_ptr<Stat> stat, std::uint32_t destination_address, std::uint16_t port = default_port);
 	~Sender();
 
-	std::string GetStat() const;
-
 private:
 	static void * ThreadFunc(void * _self);
 

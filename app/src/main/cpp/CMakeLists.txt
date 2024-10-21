@@ -2,6 +2,7 @@
 # documentation: https://d.android.com/studio/projects/add-native-code.html.
 # For more examples on how to use CMake, see https://github.com/android/ndk-samples.
 
+option(UDPFLOW_LIBRARY_ONLY OFF "Use library mode (for console app)")
 # Sets the minimum CMake version required for this project.
 cmake_minimum_required(VERSION 3.22.1)
 
@@ -11,7 +12,12 @@ set(CMAKE_CXX_STANDARD 17)
 # Since this is the top level CMakeLists.txt, the project name is also accessible
 # with ${CMAKE_PROJECT_NAME} (both CMake variables are in-sync within the top level
 # build script scope).
-project("udpflow")
+project(udpflow)
+
+if (NOT UDPFLOW_LIBRARY_ONLY)
+    set(ANDROID_INTEGARTION_SRCS native-lib.cpp)
+    set(ANDROID_INTEGARTION_LIBS android log)
+endif()
 
 if (0)
 set(CMAKE_FIND_DEBUG_MODE TRUE)
@@ -42,7 +48,7 @@ endif()
 # System.loadLibrary() and pass the name of the library defined here;
 # for GameActivity/NativeActivity derived applications, the same library name must be
 # used in the AndroidManifest.xml file.
-add_library(${CMAKE_PROJECT_NAME} SHARED
+add_library(${PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
         include/udpflow/CommandHandler.h
         include/udpflow/ICommandHandler.h
@@ -55,15 +61,16 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         src/Sender.h
         src/Stat.cpp
         src/StatCollector.cpp
-        native-lib.cpp)
+        ${ANDROID_INTEGARTION_SRCS}
+        )
 
-target_include_directories(${CMAKE_PROJECT_NAME}
-        PRIVATE
+target_include_directories(${PROJECT_NAME}
+        PUBLIC
             include)
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this
 # build script, prebuilt third-party libraries, or Android system libraries.
-target_link_libraries(${CMAKE_PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
         # List libraries link to the target library
-        android
-        log)
+        ${ANDROID_INTEGARTION_LIBS}
+        )

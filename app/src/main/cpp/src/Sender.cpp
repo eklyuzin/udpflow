@@ -3,7 +3,8 @@
 #include "udpflow/Stat.h"
 
 #include <arpa/inet.h>
-//#include <linux/in.h>
+#include <cstring>
+#include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -56,14 +57,19 @@ void * Sender::ThreadFunc(void * _self)
 
 	while (!self->stop_flag_)
 	{
-		char buffer[1024];
+		char buffer[1500];
 		int n = sendto(
-			self->sockfd_	,
+			self->sockfd_,
 			(const void *)buffer,
 			sizeof(buffer),
 			0,
 			(sockaddr *)&destination,
 			sizeof(destination));
+		if (n < 0)
+		{
+			perror("sendto");
+			break;
+		}
 		self->stat_->AddSent(n);
 	}
 	return 0;
