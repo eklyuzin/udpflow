@@ -1,7 +1,10 @@
 #include "udpflow/CommandHandler.h"
+#include "udpflow/CommandProcessor.h"
+#include "udpflow/Receiver.h"
 #include "udpflow/Server.h"
 #include "udpflow/Stat.h"
 #include "udpflow/StatCollector.h"
+#include "udpflow/Utils.h"
 
 #include <codecvt>
 #include <functional>
@@ -10,7 +13,6 @@
 #include <locale>
 #include <string>
 
-void createServer();
 namespace
 {
 
@@ -37,21 +39,6 @@ public:
 	}
 
 public:
-	void onTick()
-	{
-		if (stat_collector_)
-			stat_collector_->onTick();
-	}
-
-	std::string GetStatDump() const
-	{
-		if (!stat_collector_)
-			return {};
-
-		return stat_collector_->dump();
-	}
-
-public:
 	void StartMeasure() override
 	{
 		if (g_start_timer)
@@ -62,19 +49,6 @@ public:
 		if (g_stop_timer)
 			g_stop_timer();
 	}
-
-	void StartStat() override
-	{
-		stat_collector_ = std::make_unique<udpflow::StatCollector>(getStat());
-	}
-
-	void StopStat() override
-	{
-		stat_collector_.reset();
-	}
-
-private:
-	std::unique_ptr<udpflow::StatCollector> stat_collector_;
 };
 
 } // namespace
@@ -95,14 +69,14 @@ void createServer()
 {
 	if (!g_server)
 	{
-		const auto port = udpflow::Server::default_port;
-		g_server = std::__ndk1::make_unique<udpflow::Server>(JniCommandHandler::GetInstance(), getStat(), port);
+		const auto port = udpflow::Receiver::default_port;
+		auto command_processor = std::make_shared<udpflow::CommandProcessor>(JniCommandHandler::GetInstance());
+		g_server = std::make_unique<udpflow::Server>(std::move(command_processor), getStat());
 		output(std::string("Start UDP Server on ") + std::to_string(port));
 	}
 }
 
-extern "C" JNIEXPORT jobject JNICALL
-Java_com_example_udpflow_MainActivity_Init(JNIEnv * env, jobject main_activity)
+extern "C" JNIEXPORT jobject JNICALL Java_com_example_udpflow_MainActivity_Init(JNIEnv * env, jobject main_activity)
 {
 	JavaVM * jvm = nullptr;
 	env->GetJavaVM(&jvm);
@@ -137,6 +111,8 @@ Java_com_example_udpflow_MainActivity_Init(JNIEnv * env, jobject main_activity)
 		jmethodID method = env->GetMethodID(cls, "onStopTimer", "()V");
 		env->CallVoidMethod(main_activity, method);
 	};
+
+	udpflow::OutputIPv4Addresses();
 
 	createServer();
 
@@ -184,7 +160,44 @@ extern "C" JNIEXPORT jstring JNICALL Java_com_example_udpflow_MainActivity_GetSt
 	return nullptr;
 }
 
-extern "C" JNIEXPORT jstring JNICALL Java_com_example_udpflow_MainActivity_GetStatCSVDump(JNIEnv * env, jobject /* this */)
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_example_udpflow_MainActivity_GetStatCSVDump(JNIEnv * env, jobject /* this */)
 {
 	return env->NewStringUTF(JniCommandHandler::GetInstance()->GetStatDump().c_str());
+}
+
+extern "C" JNIEXPORT jobject JNICALL Java_com_example_udpflow_MainActivity_SendCommandTo(JNIEnv * env, jobject /* this */, jstring ip, jstring cmd)
+{
+	const jsize ip_str_len = env->GetStringUTFLength(ip);
+	const char * ip_str = env->GetStringUTFChars(ip, (jboolean *)0);
+
+	const jsize cmd_str_len = env->GetStringUTFLength(cmd);
+	const char * cmd_str = env->GetStringUTFChars(cmd, (jboolean *)0);
+
+	udpflow::Sender::Send(std::string(cmd_str, cmd_str_len), std::string(ip_str, ip_str_len));
+	env->ReleaseStringUTFChars(ip, ip_str);
+	env->ReleaseStringUTFChars(cmd, cmd_str);
+	return nullptr;
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_example_udpflow_MainActivity_StartSend(JNIEnv * env, jobject /* this */, jstring ip)
+{
+	const jsize ip_str_len = env->GetStringUTFLength(ip);
+	const char * ip_str = env->GetStringUTFChars(ip, (jboolean *)0);
+
+	createServer();
+
+	JniCommandHandler::GetInstance()->StartTransferTo(
+		udpflow::IpFromString(std::string(ip_str, ip_str_len)),
+		udpflow::constants::default_receive_port);
+	env->ReleaseStringUTFChars(ip, ip_str);
+	return nullptr;
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_example_udpflow_MainActivity_StopSend(JNIEnv * env, jobject /* this */)
+{
+	JniCommandHandler::GetInstance()->StopTransfer();
+	return nullptr;
 }

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../../src/Sender.h"
+#include "Sender.h"
 
 #include <cstdint>
+#include <string>
 
 namespace udpflow
 {
@@ -18,6 +19,8 @@ public:
 		std::uint32_t destination_address,
 		std::uint16_t port = Sender::default_port,
 		std::uint64_t rate_limit = 0) = 0;
+
+
 	virtual void StopTransfer() = 0;
 
 	virtual void StartStat() = 0;

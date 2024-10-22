@@ -1,14 +1,14 @@
-#include "Sender.h"
+#include "udpflow/Sender.h"
 
+#include "udpflow/External.h"
 #include "udpflow/Stat.h"
+#include "udpflow/Utils.h"
 
 #include <arpa/inet.h>
 #include <cstring>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
-
-extern void output(const std::string & str);
 
 namespace udpflow
 {
@@ -55,9 +55,12 @@ void * Sender::ThreadFunc(void * _self)
 		"Send to: " + std::string(inet_ntop(AF_INET, &(self->destination_address_), &ip_str[0], INET_ADDRSTRLEN)) + ":"
 		+ std::to_string(self->port_));
 
+	std::uint64_t c = 0;
 	while (!self->stop_flag_)
 	{
-		char buffer[1500];
+		std::uint64_t buffer[1500 / sizeof(c)];
+		for (int i = 0; i < sizeof(buffer) / sizeof(*buffer); ++i)
+			buffer[i] = c++;
 		int n = sendto(
 			self->sockfd_,
 			(const void *)buffer,
@@ -73,6 +76,41 @@ void * Sender::ThreadFunc(void * _self)
 		self->stat_->AddSent(n);
 	}
 	return 0;
+}
+
+void Sender::Send(const std::string & message, std::uint32_t destination_address, std::uint16_t port, std::size_t times)
+{
+	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	struct sockaddr_in destination;
+	memset(&destination, 0, sizeof(destination));
+
+	destination.sin_family = AF_INET; // IPv4
+	destination.sin_addr.s_addr = destination_address;
+	destination.sin_port = htons(port);
+
+	do
+	{
+		int n = sendto(
+			sockfd,
+			(const void *)message.c_str(),
+			message.size(),
+			0,
+			(sockaddr *)&destination,
+			sizeof(destination));
+		if (n < 0)
+		{
+			perror("sendto");
+		}
+	}
+	while (--times);
+}
+void Sender::Send(
+	const std::string & message,
+	const std::string & destination_address,
+	std::uint16_t port,
+	std::size_t times)
+{
+	Send(message, IpFromString(destination_address), port, times);
 }
 
 } // namespace udpflow

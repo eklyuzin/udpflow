@@ -1,38 +1,37 @@
 #pragma once
 
+#include "Consts.h"
+
 #include <cstdint>
 #include <memory>
-#include <pthread.h>
+
+struct sockaddr_in;
 
 namespace udpflow
 {
 
-class ICommandHandler;
+class Receiver;
+class CommandProcessor;
 class Stat;
 
 class Server
 {
 public:
-	static constexpr std::uint16_t default_port = 1777;
-
-public:
 	Server(
-		std::shared_ptr<ICommandHandler> command_handler,
+		std::shared_ptr<CommandProcessor> command_processor,
 		std::shared_ptr<Stat> stat,
-		std::uint16_t port = default_port);
+		std::uint16_t port = constants::default_receive_port);
 	~Server();
 
 private:
-	static void * ThreadFunc(void * _self);
+	void OnData(struct sockaddr_in & client_address, const char * data, int data_len);
 
 private:
-	const std::shared_ptr<ICommandHandler> command_handler_;
+	const std::shared_ptr<CommandProcessor> command_processor_;
 	const std::shared_ptr<Stat> stat_;
+	const std::unique_ptr<Receiver> receiver_;
 
-	int sockfd_ = {};
-
-	bool stop_flag_ = false;
-	pthread_t pthread_;
+	std::uint32_t last_peer_address_ = {};
 };
 
 } // namespace udpflow

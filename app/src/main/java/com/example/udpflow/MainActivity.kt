@@ -83,7 +83,18 @@ class MainActivity : AppCompatActivity(), OnClickListener {
         binding.buttonSave.setOnClickListener {
             onSaveStat()
         }
-
+        binding.buttonStartSend.setOnClickListener{
+            StartSend(binding.editTextIP.text.toString())
+        }
+        binding.buttonStopSend.setOnClickListener{
+            StopSend()
+        }
+        binding.buttonStartRecv.setOnClickListener{
+            SendCommandTo(binding.editTextIP.text.toString(), "start_send")
+        }
+        binding.buttonStopRecv.setOnClickListener{
+            SendCommandTo(binding.editTextIP.text.toString(), "stop_send")
+        }
         ActivityCompat.requestPermissions(
             this@MainActivity, arrayOf<String>(
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -153,6 +164,9 @@ class MainActivity : AppCompatActivity(), OnClickListener {
     external fun GetStat(): String
     external fun onTick(): Void
     external fun GetStatCSVDump(): String
+    external fun SendCommandTo(ip: String, cmd: String): Void
+    external fun StartSend(ip: String): Void
+    external fun StopSend(): Void
 
 
     companion object {

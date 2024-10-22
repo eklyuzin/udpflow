@@ -51,16 +51,24 @@ endif()
 add_library(${PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
         include/udpflow/CommandHandler.h
+        include/udpflow/CommandProcessor.h
+        include/udpflow/Consts.h
+        include/udpflow/External.h
         include/udpflow/ICommandHandler.h
+        include/udpflow/Receiver.h
+        include/udpflow/Sender.h
         include/udpflow/Server.h
         include/udpflow/Stat.h
         include/udpflow/StatCollector.h
+        include/udpflow/Utils.h
         src/CommandHandler.cpp
+        src/CommandProcessor.cpp
+        src/Receiver.cpp
         src/Sender.cpp
         src/Server.cpp
-        src/Sender.h
         src/Stat.cpp
         src/StatCollector.cpp
+        src/Utils.cpp
         ${ANDROID_INTEGARTION_SRCS}
         )
 
